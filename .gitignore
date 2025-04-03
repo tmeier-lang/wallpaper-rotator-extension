@@ -1,0 +1,2 @@
+# Ignore compiled GSettings schema cache
+schemas/gschemas.compiled

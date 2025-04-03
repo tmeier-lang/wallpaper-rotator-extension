@@ -1,0 +1,9 @@
+{
+    "name": "Wallpaper Rotator",
+    "description": "Automatically rotate desktop wallpapers from a selected folder",
+    "uuid": "wallpaper-rotator-extension@tmeier-lang.github.io",
+    "shell-version": ["42", "43", "44"],
+    "url": "https://github.com/tmeier-lang/wallpaper-rotator-extension",
+    "version": 1,
+    "settings-schema": "org.gnome.shell.extensions.wallpaper-rotator"
+  }

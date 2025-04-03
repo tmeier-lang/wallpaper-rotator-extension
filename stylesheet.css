@@ -1,0 +1,12 @@
+/* Styles for the Wallpaper Rotator Extension */
+
+.wallpaper-rotator-label {
+    text-align: center;
+    font-size: 0.9em;
+}
+
+.wallpaper-rotator-path {
+    font-size: 0.8em;
+    font-style: italic;
+    color: #999999;
+}
