@@ -61,7 +61,7 @@ If you prefer to install manually from this source code (version 1):
     mkdir -p "$INSTALL_PATH/schemas"
 
     # Copy essential files
-    cp extension.js prefs.js metadata.json icon.svg stylesheet.css "$INSTALL_PATH/"
+    cp extension.js prefs.js metadata.json icon-dark.svg icon-light.svg stylesheet.css "$INSTALL_PATH/"
     
     # Copy schema files (both .xml and compiled version)
     cp schemas/org.gnome.shell.extensions.wallpaper-rotator.gschema.xml "$INSTALL_PATH/schemas/"
@@ -103,7 +103,8 @@ The source code repository contains the following key files:
 wallpaper-rotator-extension/
 ├── .gitignore
 ├── extension.js
-├── icon.svg
+├── icon-dark.svg
+├── icon-light.svg
 ├── metadata.json
 ├── prefs.js
 ├── README.md
