@@ -122,4 +122,4 @@ Contributions are welcome! Please submit pull requests via GitHub.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details. (Assuming you have a LICENSE file in your repo).
+This project is licensed under the GNU General Public License v3.0.
