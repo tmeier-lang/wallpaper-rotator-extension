@@ -3,14 +3,14 @@
   <schema id="org.gnome.shell.extensions.wallpaper-rotator" path="/org/gnome/shell/extensions/wallpaper-rotator/">
     <key name="wallpaper-directory" type="s">
       <default>''</default>
-      <summary>Directory containing wallpapers</summary>
-      <description>Path to the directory containing wallpaper images</description>
+      <summary>Wallpaper directory</summary>
+      <description>Directory containing wallpaper images</description>
     </key>
     <key name="interval" type="i">
       <default>60</default>
       <range min="1" max="1440"/>
-      <summary>Wallpaper rotation interval in minutes</summary>
-      <description>How often the wallpaper should be changed (in minutes)</description>
+      <summary>Rotation interval</summary>
+      <description>Minutes between wallpaper changes</description>
     </key>
   </schema>
 </schemalist>

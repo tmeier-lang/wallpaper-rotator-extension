@@ -1,132 +1,109 @@
-// prefs.js - Extension preferences
-const { GObject, Gtk, Gio, GLib } = imports.gi;
+'use strict';
+
+const { Adw, Gio, Gtk, Pango } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Config = imports.misc.config;
-const [major] = Config.PACKAGE_VERSION.split('.');
-const shellVersion = Number.parseInt(major);
 
-// Create a preferences widget using the appropriate style for GNOME version
+function init() {
+}
+
 function fillPreferencesWindow(window) {
-    const settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.wallpaper-rotator');
-    
     // Create a preferences page
-    const page = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        margin_top: 24,
-        margin_bottom: 24,
-        margin_start: 24,
-        margin_end: 24,
-        spacing: 20,
-        halign: Gtk.Align.CENTER,
+    const page = new Adw.PreferencesPage();
+    
+    // Create a preferences group
+    const group = new Adw.PreferencesGroup({
+        title: 'Wallpaper Rotator Settings',
+        description: 'Configure wallpaper rotation settings'
+    });
+    page.add(group);
+
+    // Get settings
+    const settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.wallpaper-rotator');
+
+    // Directory chooser
+    const dirRow = new Adw.ActionRow({
+        title: 'Wallpaper Directory',
+        subtitle: 'Select the folder containing your wallpapers'
     });
     
-    // Directory selection
-    const dirFrame = new Gtk.Frame({
-        label: "Wallpaper Directory",
-        margin_bottom: 12,
+    // Add label to show current directory
+    const dirLabel = new Gtk.Label({
+        label: settings.get_string('wallpaper-directory') || 'Not set',
+        ellipsize: Pango.EllipsizeMode.MIDDLE,
+        max_width_chars: 30,
+        valign: Gtk.Align.CENTER
     });
-    
-    const dirBox = new Gtk.Box({
-        orientation: Gtk.Orientation.HORIZONTAL,
-        margin_top: 12,
-        margin_bottom: 12,
-        margin_start: 12,
-        margin_end: 12,
-        spacing: 12,
-    });
-    
-    const dirEntry = new Gtk.Entry({
-        hexpand: true,
-    });
-    
-    // Initialize directory
-    dirEntry.text = settings.get_string('wallpaper-directory') || 
-                    GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
+    dirRow.add_suffix(dirLabel);
     
     const dirButton = new Gtk.Button({
-        label: "Browse...",
+        label: 'Choose Directory',
+        valign: Gtk.Align.CENTER
     });
-    
+    dirRow.add_suffix(dirButton);
+    group.add(dirRow);
+
     dirButton.connect('clicked', () => {
         const dialog = new Gtk.FileChooserDialog({
             title: 'Select Wallpaper Directory',
             action: Gtk.FileChooserAction.SELECT_FOLDER,
-            transient_for: window.get_root(),
-            modal: true,
+            transient_for: window,
+            modal: true
         });
         
-        dialog.add_button("Cancel", Gtk.ResponseType.CANCEL);
-        dialog.add_button("Select", Gtk.ResponseType.ACCEPT);
+        // Set current folder if it exists
+        const currentPath = settings.get_string('wallpaper-directory');
+        if (currentPath) {
+            dialog.set_current_folder(Gio.File.new_for_path(currentPath));
+        }
         
+        dialog.add_button('Cancel', Gtk.ResponseType.CANCEL);
+        dialog.add_button('Select', Gtk.ResponseType.ACCEPT);
+
         dialog.connect('response', (dialog, response) => {
             if (response === Gtk.ResponseType.ACCEPT) {
-                dirEntry.text = dialog.get_file().get_path();
-                settings.set_string('wallpaper-directory', dirEntry.text);
+                const path = dialog.get_file().get_path();
+                settings.set_string('wallpaper-directory', path);
+                dirLabel.set_label(path);
+                
+                // Notify extension of change
+                settings.apply();
             }
             dialog.destroy();
         });
-        
+
         dialog.show();
     });
-    
-    dirEntry.connect('changed', () => {
-        settings.set_string('wallpaper-directory', dirEntry.text);
+
+    // Interval spinbutton
+    const intervalRow = new Adw.ActionRow({
+        title: 'Rotation Interval',
+        subtitle: 'Minutes between wallpaper changes (1-1440)'
     });
     
-    dirBox.append(dirEntry);
-    dirBox.append(dirButton);
-    dirFrame.set_child(dirBox);
-    page.append(dirFrame);
-    
-    // Interval setting
-    const intervalFrame = new Gtk.Frame({
-        label: "Rotation Settings",
-        margin_bottom: 12,
-    });
-    
-    const intervalBox = new Gtk.Box({
-        orientation: Gtk.Orientation.HORIZONTAL,
-        margin_top: 12,
-        margin_bottom: 12,
-        margin_start: 12,
-        margin_end: 12,
-        spacing: 12,
-    });
-    
-    const intervalLabel = new Gtk.Label({
-        label: "Change interval (minutes):",
-        xalign: 0,
-    });
-    
-    const intervalSpinner = new Gtk.SpinButton({
+    const intervalSpinButton = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
             lower: 1,
             upper: 1440,
             step_increment: 1,
             page_increment: 10,
-            value: settings.get_int('interval') || 60,
+            value: settings.get_int('interval')
         }),
-        climb_rate: 1,
-        digits: 0,
-        numeric: true,
+        valign: Gtk.Align.CENTER
     });
-    
-    intervalSpinner.connect('value-changed', () => {
-        settings.set_int('interval', intervalSpinner.get_value_as_int());
-    });
-    
-    intervalBox.append(intervalLabel);
-    intervalBox.append(intervalSpinner);
-    intervalFrame.set_child(intervalBox);
-    page.append(intervalFrame);
-    
-    // Add page to window
-    window.add(page);
-}
+    intervalRow.add_suffix(intervalSpinButton);
+    group.add(intervalRow);
 
-// For backwards compatibility with older GNOME versions
-function init() {
+    // Bind settings
+    settings.bind(
+        'interval',
+        intervalSpinButton,
+        'value',
+        Gio.SettingsBindFlags.DEFAULT
+    );
+
+    // Add the page to the window
+    window.add(page);
 }
 
 function buildPrefsWidget() {
