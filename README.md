@@ -47,20 +47,25 @@ If you prefer to install manually from this source code (version 1):
     UUID="wallpaper-rotator-extension@tmeier-lang.github.io"
     ```
 
-4.  **Copy Files:** Create the extension directory using the correct UUID and copy the necessary files.
+4.  **Compile Settings Schema:** First compile the schema in the source directory:
+    ```bash
+    # Compile schema in source directory
+    glib-compile-schemas schemas/
+    ```
+
+5.  **Copy Files:** Create the extension directory and copy the files:
     ```bash
     INSTALL_PATH="$HOME/.local/share/gnome-shell/extensions/$UUID"
 
-    mkdir -p "$INSTALL_PATH"
-    # Copy essential files identified from your project
-    cp extension.js prefs.js metadata.json icon.svg stylesheet.css "$INSTALL_PATH/"
-    # Copy the schemas directory
-    cp -r schemas "$INSTALL_PATH/"
-    ```
+    # Create installation directory
+    mkdir -p "$INSTALL_PATH/schemas"
 
-5.  **Compile Settings Schema:** This makes your extension's settings available to GNOME.
-    ```bash
-    glib-compile-schemas "$INSTALL_PATH/schemas/"
+    # Copy essential files
+    cp extension.js prefs.js metadata.json icon.svg stylesheet.css "$INSTALL_PATH/"
+    
+    # Copy schema files (both .xml and compiled version)
+    cp schemas/org.gnome.shell.extensions.wallpaper-rotator.gschema.xml "$INSTALL_PATH/schemas/"
+    cp schemas/gschemas.compiled "$INSTALL_PATH/schemas/"
     ```
 
 6.  **Restart GNOME Shell:**
