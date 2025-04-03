@@ -9,7 +9,6 @@ const Me = ExtensionUtils.getCurrentExtension();
 // Default configuration
 const DEFAULT_INTERVAL = 60; // minutes
 const DEFAULT_WALLPAPER_DIR = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES);
-const MIN_CHANGE_DELAY = 5; // seconds
 
 let wallpaperRotator = null;
 
@@ -27,6 +26,7 @@ class WallpaperRotator extends PanelMenu.Button {
         this._settings = new Gio.Settings({ schema: 'org.gnome.desktop.background' });
         this._lastChangeTime = 0;
         this._timeout = null;
+        this._extensionSettings = null;
 
         // Load settings from extension preferences (if available)
         this._loadSettings();
@@ -79,6 +79,11 @@ class WallpaperRotator extends PanelMenu.Button {
         this._rotationSwitch.connect('toggled', this._onRotationToggled.bind(this));
         this.menu.addMenuItem(this._rotationSwitch);
         
+        // Refresh wallpapers item
+        const refreshItem = new PopupMenu.PopupMenuItem('Refresh Wallpaper List');
+        refreshItem.connect('activate', this._onRefreshActivated.bind(this));
+        this.menu.addMenuItem(refreshItem);
+        
         // Settings button
         const settingsItem = new PopupMenu.PopupMenuItem('Settings');
         settingsItem.connect('activate', this._onSettingsActivated.bind(this));
@@ -86,23 +91,49 @@ class WallpaperRotator extends PanelMenu.Button {
     }
 
     _loadSettings() {
-        // In a full implementation, you would load from gsettings
-        // For now, we'll use default values
         try {
-            const settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.wallpaper-rotator');
-            this._wallpaperDir = settings.get_string('wallpaper-directory') || DEFAULT_WALLPAPER_DIR;
-            this._interval = settings.get_int('interval') || DEFAULT_INTERVAL;
+            this._extensionSettings = ExtensionUtils.getSettings('org.gnome.shell.extensions.wallpaper-rotator');
+            
+            // Ensure we're getting actual values, not empty defaults
+            const dirValue = this._extensionSettings.get_string('wallpaper-directory');
+            if (dirValue && dirValue !== '') {
+                this._wallpaperDir = dirValue;
+                log(`Wallpaper Rotator: Loaded directory setting: ${this._wallpaperDir}`);
+            } else {
+                this._wallpaperDir = DEFAULT_WALLPAPER_DIR;
+                // Save the default value back to settings
+                this._extensionSettings.set_string('wallpaper-directory', this._wallpaperDir);
+                log(`Wallpaper Rotator: Using default directory: ${this._wallpaperDir}`);
+            }
+            
+            this._interval = this._extensionSettings.get_int('interval') || DEFAULT_INTERVAL;
+            log(`Wallpaper Rotator: Loaded interval setting: ${this._interval}`);
+
+            // Connect to changes
+            this._settingsChangedId = this._extensionSettings.connect('changed', this._onSettingsChanged.bind(this));
         } catch (e) {
             log(`Wallpaper Rotator: Error loading settings: ${e.message}`);
+            // Fall back to defaults
+            this._wallpaperDir = DEFAULT_WALLPAPER_DIR;
+            this._interval = DEFAULT_INTERVAL;
         }
     }
 
     _loadWallpapers() {
+        log(`Wallpaper Rotator: Loading wallpapers from ${this._wallpaperDir}`);
+        
         this._wallpapers = [];
         this._currentIndex = 0;
         
         try {
             const dir = Gio.File.new_for_path(this._wallpaperDir);
+            
+            if (!dir.query_exists(null)) {
+                log(`Wallpaper Rotator: Directory does not exist: ${this._wallpaperDir}`);
+                this._updateStatus(`Error: Directory does not exist`);
+                return;
+            }
+            
             const enumerator = dir.enumerate_children(
                 'standard::name,standard::type',
                 Gio.FileQueryInfoFlags.NONE,
@@ -122,6 +153,8 @@ class WallpaperRotator extends PanelMenu.Button {
                 }
             }
             
+            log(`Wallpaper Rotator: Found ${this._wallpapers.length} wallpapers`);
+            
             // Try to find current wallpaper in the list
             try {
                 const currentWallpaperUri = this._settings.get_string('picture-uri');
@@ -130,6 +163,9 @@ class WallpaperRotator extends PanelMenu.Button {
                 const index = this._wallpapers.indexOf(currentPath);
                 if (index >= 0) {
                     this._currentIndex = index;
+                    log(`Wallpaper Rotator: Current wallpaper found at index ${index}`);
+                } else {
+                    log(`Wallpaper Rotator: Current wallpaper not found in directory`);
                 }
             } catch (e) {
                 log(`Wallpaper Rotator: Error finding current wallpaper: ${e.message}`);
@@ -156,18 +192,11 @@ class WallpaperRotator extends PanelMenu.Button {
         
         const path = this._wallpapers[this._currentIndex];
         const basename = GLib.path_get_basename(path);
-        this._statusItem.label.text = `Current: ${basename}`;
+        this._statusItem.label.text = `Current: ${basename} (${this._currentIndex + 1}/${this._wallpapers.length})`;
     }
     
     _setWallpaper(path) {
         try {
-            // Rate limiting check
-            const currentTime = GLib.get_monotonic_time() / 1000000;
-            if (currentTime - this._lastChangeTime < MIN_CHANGE_DELAY) {
-                log(`Wallpaper Rotator: Rate limit - too soon to change wallpaper`);
-                return false;
-            }
-            
             // Check if file exists
             const file = Gio.File.new_for_path(path);
             if (!file.query_exists(null)) {
@@ -182,7 +211,7 @@ class WallpaperRotator extends PanelMenu.Button {
             this._settings.set_string('picture-uri', uri);
             this._settings.set_string('picture-uri-dark', uri);
             
-            this._lastChangeTime = currentTime;
+            this._lastChangeTime = GLib.get_monotonic_time() / 1000000;
             this._updateStatus();
             return true;
         } catch (e) {
@@ -268,7 +297,32 @@ class WallpaperRotator extends PanelMenu.Button {
     }
     
     _onRandomActivated() {
-        this._changeWallpaperRandom();
+        if (!this._wallpapers || this._wallpapers.length === 0) {
+            log("Wallpaper Rotator: No wallpapers to choose from.");
+            return;
+        }
+
+        if (this._wallpapers.length === 1) {
+            log("Wallpaper Rotator: Only one wallpaper, 'Random' does nothing.");
+            // Optionally, still set the wallpaper to ensure consistency,
+            // or just return if you prefer 'Random' to do nothing in this case.
+            // this._setWallpaper(this._wallpapers[this._currentIndex]); // Optional
+            return;
+        }
+        // *** END OF ADDED CHECK ***
+
+        const oldIndex = this._currentIndex;
+        while (this._currentIndex === oldIndex) {
+            this._currentIndex = Math.floor(Math.random() * this._wallpapers.length);
+        }
+
+        log(`Wallpaper Rotator: Randomly changing wallpaper via menu`); // Added log for clarity
+        this._setWallpaper(this._wallpapers[this._currentIndex]);
+    }
+    
+    _onRefreshActivated() {
+        log(`Wallpaper Rotator: Manually refreshing wallpaper list`);
+        this._loadWallpapers();
     }
     
     _onRotationToggled(item, state) {
@@ -286,8 +340,52 @@ class WallpaperRotator extends PanelMenu.Button {
             log(`Wallpaper Rotator: Error opening preferences: ${e.message}`);
         }
     }
+
+    _onSettingsChanged(settings, key) {
+        log(`Wallpaper Rotator: Settings changed - ${key}`);
+        
+        switch (key) {
+            case 'wallpaper-directory':
+                const newDir = settings.get_string('wallpaper-directory');
+                log(`Wallpaper Rotator: Directory changed to ${newDir}`);
+                
+                if (newDir !== this._wallpaperDir) {
+                    this._wallpaperDir = newDir;
+                    // Explicitly reload wallpapers when directory changes
+                    this._loadWallpapers();
+                }
+                break;
+                
+            case 'interval':
+                const newInterval = settings.get_int('interval');
+                if (newInterval !== this._interval) {
+                    this._interval = newInterval;
+                    if (this._isRunning) {
+                        this._stopRotation();
+                        this._startRotation();
+                    }
+                    this._rotationSwitch.label.text = `Auto-Rotate (Every ${this._interval} min)`;
+                }
+                break;
+                
+            case 'last-action':
+                const action = settings.get_string('last-action');
+                if (action === 'directory-changed') {
+                    // Force reload wallpapers when directory changed signal received
+                    log(`Wallpaper Rotator: Received directory-changed action`);
+                    this._loadWallpapers();
+                }
+                break;
+        }
+    }
     
     destroy() {
+        // Disconnect settings signal
+        if (this._extensionSettings && this._settingsChangedId) {
+            this._extensionSettings.disconnect(this._settingsChangedId);
+            this._settingsChangedId = null;
+        }
+        
         this._stopRotation();
         super.destroy();
     }

@@ -1,6 +1,6 @@
 'use strict';
 
-const { Adw, Gio, Gtk, Pango } = imports.gi;
+const { Adw, Gio, GLib, Gtk, Gdk, Pango } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -44,34 +44,52 @@ function fillPreferencesWindow(window) {
     group.add(dirRow);
 
     dirButton.connect('clicked', () => {
-        const dialog = new Gtk.FileChooserDialog({
+        const dialog = new Gtk.FileChooserNative({
             title: 'Select Wallpaper Directory',
             action: Gtk.FileChooserAction.SELECT_FOLDER,
-            transient_for: window,
+            transient_for: window.get_root ? window.get_root() : window,
             modal: true
         });
         
         // Set current folder if it exists
         const currentPath = settings.get_string('wallpaper-directory');
-        if (currentPath) {
-            dialog.set_current_folder(Gio.File.new_for_path(currentPath));
+        if (currentPath && currentPath !== '') {
+            try {
+                const file = Gio.File.new_for_path(currentPath);
+                if (file.query_exists(null)) {
+                    dialog.set_current_folder(file);
+                }
+            } catch (e) {
+                log(`Error setting current folder: ${e.message}`);
+            }
         }
         
-        dialog.add_button('Cancel', Gtk.ResponseType.CANCEL);
-        dialog.add_button('Select', Gtk.ResponseType.ACCEPT);
-
         dialog.connect('response', (dialog, response) => {
             if (response === Gtk.ResponseType.ACCEPT) {
-                const path = dialog.get_file().get_path();
-                settings.set_string('wallpaper-directory', path);
-                dirLabel.set_label(path);
-                
-                // Notify extension of change
-                settings.apply();
+                const file = dialog.get_file();
+                if (file) {
+                    const path = file.get_path();
+                    log(`Setting wallpaper directory to: ${path}`);
+                    
+                    // Update settings
+                    settings.set_string('wallpaper-directory', path);
+                    dirLabel.set_label(path);
+                    
+                    // Ensure the settings are saved immediately
+                    Gio.Settings.sync();
+                    
+                    // Signal the change to the extension
+                    settings.set_string('last-action', 'directory-changed');
+                    
+                    // Need to set this back to empty to ensure future changes get detected
+                    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                        settings.set_string('last-action', '');
+                        return GLib.SOURCE_REMOVE;
+                    });
+                }
             }
-            dialog.destroy();
         });
-
+        
         dialog.show();
     });
 
@@ -101,6 +119,38 @@ function fillPreferencesWindow(window) {
         'value',
         Gio.SettingsBindFlags.DEFAULT
     );
+    
+    // Add a "Preview" button to open the selected directory
+    const actionGroup = new Adw.PreferencesGroup();
+    page.add(actionGroup);
+    
+    const openDirButton = new Gtk.Button({
+        label: 'Open Wallpaper Directory',
+        halign: Gtk.Align.CENTER,
+        margin_top: 20
+    });
+    
+    openDirButton.connect('clicked', () => {
+        const path = settings.get_string('wallpaper-directory');
+        if (path && path !== '') {
+            try {
+                const file = Gio.File.new_for_path(path);
+                
+                // Get launcher for directory
+                const appInfo = Gio.AppInfo.get_default_for_type('inode/directory', true);
+                if (appInfo) {
+                    const uris = [file.get_uri()];
+                    appInfo.launch_uris(uris, null);
+                } else {
+                    log('Error: No default file manager found');
+                }
+            } catch (e) {
+                log(`Error opening directory: ${e.message}`);
+            }
+        }
+    });
+    
+    actionGroup.add(openDirButton);
 
     // Add the page to the window
     window.add(page);
