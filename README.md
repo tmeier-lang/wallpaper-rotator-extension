@@ -15,11 +15,20 @@ Automatically rotate desktop wallpapers from a selected folder using a convenien
 
 ## Screenshots
 
-Access all features from the panel menu:
-![Main Extension Menu](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot1.png)
-
-Configure the extension via the settings dialog:
-![Settings Dialog](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot2.png)
+<table>
+  <tr>
+    <td align="center" valign="top">
+      <img src="https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot1.png" alt="Main Extension Menu" width="350">
+      <br>
+      <em>Main Extension Menu</em>
+    </td>
+    <td align="center" valign="top">
+      <img src="https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot2.png" alt="Settings Dialog" width="350">
+      <br>
+      <em>Settings Dialog</em>
+    </td>
+  </tr>
+</table>
 
 ## Compatibility
 
