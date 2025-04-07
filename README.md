@@ -18,8 +18,8 @@ Automatically rotate desktop wallpapers from a selected folder using a convenien
 Access all features from the panel menu:
 ![Main Extension Menu](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot1.png)
 
-![Settings Menu](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot2.png)
-
+Configure the extension via the settings dialog:
+![Settings Dialog](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot2.png)
 
 ## Compatibility
 
@@ -114,6 +114,7 @@ Customize the extension via the Settings window (accessed from the extension's m
 
 The source code repository contains the following key files and directories (**icons are now in icons/**):
 
+```
 wallpaper-rotator-extension/
 ├── .gitignore          # Optional Git ignore file
 ├── extension.js        # Main extension logic
@@ -129,6 +130,7 @@ wallpaper-rotator-extension/
 ├── schemas/            # GSettings schema definition
 │   └── org.gnome.shell.extensions.wallpaper-rotator.gschema.xml
 └── README.md           # This file
+```
 
 *Note: The compiled schema file (`gschemas.compiled`) is generated during installation inside the `schemas` directory within your installation path (`~/.local/share/gnome-shell/extensions/$UUID/schemas/`), it is not stored in the source repository.*
 
