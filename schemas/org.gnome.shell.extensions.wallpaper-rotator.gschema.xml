@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="2.0" encoding="UTF-8"?>
 <schemalist>
   <schema id="org.gnome.shell.extensions.wallpaper-rotator" path="/org/gnome/shell/extensions/wallpaper-rotator/">
     <key name="wallpaper-directory" type="s">
