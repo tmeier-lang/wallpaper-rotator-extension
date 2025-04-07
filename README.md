@@ -1,6 +1,7 @@
 # Wallpaper Rotator GNOME Extension (v1)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 Automatically rotate desktop wallpapers from a selected folder using a convenient GNOME Shell indicator menu.
 
 ## Features
@@ -9,11 +10,21 @@ Automatically rotate desktop wallpapers from a selected folder using a convenien
 * **Manual Control:** Navigate forwards, backwards, or jump to a random wallpaper anytime.
 * **Panel Indicator:** Access all features easily from the GNOME top panel.
 * **Customizable:** Configure the wallpaper source directory and rotation frequency.
+* **Random Order Toggle:** Choose between sequential or random rotation order.
+* **Hover Preview:** See the next/previous wallpaper by hovering over the navigation buttons in the menu.
+
+## Screenshots
+
+Access all features from the panel menu:
+![Main Extension Menu](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot1.png)
+
+![Settings Menu](https://raw.githubusercontent.com/tmeier-lang/wallpaper-rotator-extension/main/images/screenshot2.png)
+
 
 ## Compatibility
 
 * **GNOME Shell Versions:** Officially supports versions **42, 43, and 44** (as per `metadata.json`).
-* **Note:** (As of April 2025) Newer GNOME versions (45, 46+) have been released. Compatibility with these versions has not been confirmed yet. Testing and potential updates may be required.
+* **Note:** As of April 2025, newer GNOME versions (45, 46+) have been released. Compatibility with these versions has not been confirmed. Testing and potential updates may be required.
 
 ## Installation
 
@@ -27,14 +38,14 @@ Automatically rotate desktop wallpapers from a selected folder using a convenien
 
 If you prefer to install manually from this source code (version 1):
 
-1.  **Prerequisites:** Ensure you have `git` and `glib-compile-schemas` installed. These are usually standard on GNOME-based systems.
+1.  **Prerequisites:** Ensure you have `git` and `glib-compile-schemas` installed.
     ```bash
     # Example for Debian/Ubuntu:
     # sudo apt update && sudo apt install git gettext glib-networking
     # Example for Fedora:
     # sudo dnf install git gettext glib-networking glib2-devel
     ```
-    *(Note: `gettext` is needed if you plan translations; `glib-networking` for potential web features, `glib2-devel` often includes `glib-compile-schemas`)*
+    *(Note: `gettext` may be needed for future translations; `glib2-devel` often includes `glib-compile-schemas`)*
 
 2.  **Clone the Repository:**
     ```bash
@@ -47,25 +58,25 @@ If you prefer to install manually from this source code (version 1):
     UUID="wallpaper-rotator-extension@tmeier-lang.github.io"
     ```
 
-4.  **Compile Settings Schema:** First compile the schema in the source directory:
-    ```bash
-    # Compile schema in source directory
-    glib-compile-schemas schemas/
-    ```
-
-5.  **Copy Files:** Create the extension directory and copy the files:
+4.  **Copy Files:** Create the extension directory and copy the necessary files:
     ```bash
     INSTALL_PATH="$HOME/.local/share/gnome-shell/extensions/$UUID"
-
-    # Create installation directory
     mkdir -p "$INSTALL_PATH/schemas"
+    mkdir -p "$INSTALL_PATH/icons" # Ensure icons dir exists at destination
 
-    # Copy essential files
-    cp extension.js prefs.js metadata.json icon-dark.svg icon-light.svg stylesheet.css "$INSTALL_PATH/"
-    
-    # Copy schema files (both .xml and compiled version)
+    # Copy code, metadata, UI, styles, schema source
+    cp extension.js metadata.json prefs.js stylesheet.css "$INSTALL_PATH/"
     cp schemas/org.gnome.shell.extensions.wallpaper-rotator.gschema.xml "$INSTALL_PATH/schemas/"
-    cp schemas/gschemas.compiled "$INSTALL_PATH/schemas/"
+    # Copy icons INTO the icons subdirectory
+    cp icons/*.svg "$INSTALL_PATH/icons/"
+
+    # Optionally copy README etc. - not needed for runtime
+    # cp README.md "$INSTALL_PATH/"
+    ```
+
+5.  **Compile Schema at Destination:** Compile the schema *after* copying it to the installation path.
+    ```bash
+    glib-compile-schemas "$INSTALL_PATH/schemas/"
     ```
 
 6.  **Restart GNOME Shell:**
@@ -77,48 +88,56 @@ If you prefer to install manually from this source code (version 1):
         ```bash
         gnome-extensions enable "$UUID"
         ```
-    * Or, open the **Extensions** application (or GNOME Tweaks) and enable "Wallpaper Rotator" using the toggle switch. Ensure you are running a compatible GNOME Shell version (42, 43, or 44).
+    * Or, open the **Extensions** application (or GNOME Tweaks) and enable "Wallpaper Rotator".
 
 ## Usage
 
-Once installed and enabled on a compatible GNOME version:
+Once installed and enabled:
 
-1.  Find the **Wallpaper Rotator icon** in your GNOME top panel.
+1.  Find the **Wallpaper Rotator icon** (a stylized image icon) in your GNOME top panel.
 2.  Click the icon to open the menu.
-3.  Use the **toggle switch** to enable or disable automatic rotation.
-4.  Navigate manually using the **"Previous"**, **"Next"**, or **"Random"** menu items.
-5.  Click **"Settings"** to open the configuration window.
+3.  View the current wallpaper preview and status.
+4.  Use the **toggle switches** to enable/disable auto-rotation or random order.
+5.  Navigate manually using the **"<" (Previous)**, **">" (Next)**, or **center (Random)** buttons. Hover over "<" or ">" to preview.
+6.  Click **"Refresh Wallpaper List"** to rescan the source directory.
+7.  Click **"Settings"** to open the configuration window.
 
 ## Configuration
 
-You can customize the extension's behavior via the Settings window accessed from the extension's menu:
+Customize the extension via the Settings window (accessed from the extension's menu):
 
-* **Wallpaper Directory:** Select the folder containing your desired wallpaper images. Ensure the folder contains readable image files (e.g., `.jpg`, `.png`, `.jpeg`). (Default: *None - must be set by user*)
-* **Rotation Interval (minutes):** Set how frequently the wallpaper should change automatically. (Default: `60` minutes. Allowed range: `1` to `1440` minutes).
+* **Wallpaper Directory:** Select the folder containing your desired wallpaper images. Ensure the folder exists and contains readable image files (e.g., `.jpg`, `.png`, `.webp`). (Defaults to your system's `Pictures` folder if not set).
+* **Rotation Interval (minutes):** Set how frequently the wallpaper should change automatically when auto-rotate is on. (Default: `60` minutes. Valid range: `1` to `1440`).
+* **Random Order:** Toggle whether wallpapers rotate sequentially or randomly when auto-rotate is on.
 
 ## Source Code Structure
 
-The source code repository contains the following key files:
+The source code repository contains the following key files and directories (**icons are now in icons/**):
 
 wallpaper-rotator-extension/
-├── .gitignore
-├── extension.js
-├── icon-dark.svg
-├── icon-light.svg
-├── metadata.json
-├── prefs.js
-├── README.md
-├── schemas/
+├── .gitignore          # Optional Git ignore file
+├── extension.js        # Main extension logic
+├── metadata.json       # Extension metadata (UUID, versions, etc.)
+├── prefs.js            # Code for the Settings dialog UI
+├── stylesheet.css      # Optional CSS for styling menu/dialog
+├── icons/              # Panel icons (light/dark variants)
+│   ├── icon-dark.svg
+│   └── icon-light.svg
+├── images/             # Optional: For README screenshots
+│   ├── screenshot1.png # Main menu screenshot
+│   └── screenshot2.png # Settings menu screenshot
+├── schemas/            # GSettings schema definition
 │   └── org.gnome.shell.extensions.wallpaper-rotator.gschema.xml
-└── stylesheet.css
+└── README.md           # This file
 
-*Note: The `gschemas.compiled` file is generated during installation within the `schemas` directory in your installation path (`~/.local/share/gnome-shell/extensions/$UUID/`), not stored in the source repository.*
+*Note: The compiled schema file (`gschemas.compiled`) is generated during installation inside the `schemas` directory within your installation path (`~/.local/share/gnome-shell/extensions/$UUID/schemas/`), it is not stored in the source repository.*
 
 ## Troubleshooting
 
-* **Extension Not Loading/Enabled:** Verify you are running a compatible GNOME Shell version (42, 43, or 44). Double-check that the installation directory name under `~/.local/share/gnome-shell/extensions/` exactly matches the UUID: `wallpaper-rotator-extension@tmeier-lang.github.io`. Ensure you've restarted GNOME Shell and tried enabling via the Extensions app. Check GNOME Shell logs (`journalctl /usr/bin/gnome-shell -f`) for errors.
-* **Settings Not Working / Not Saving:** Ensure you ran `glib-compile-schemas "$INSTALL_PATH/schemas/"` correctly during installation. Verify the schema ID `org.gnome.shell.extensions.wallpaper-rotator` in `metadata.json` matches the ID inside the `.gschema.xml` file.
-* **Wallpapers Not Changing:** Verify the selected Wallpaper Directory exists, contains valid image files, and the extension has permission to read it. Check the Rotation Interval setting.
+* **Extension Not Loading/Enabled:** Verify compatibility with your GNOME Shell version. Double-check the installation directory name matches the UUID exactly: `wallpaper-rotator-extension@tmeier-lang.github.io`. Ensure GNOME Shell was restarted. Check logs (`journalctl /usr/bin/gnome-shell -f` or Logs app) for errors related to the UUID. Check that icon files were copied correctly into `$INSTALL_PATH/icons/`.
+* **Settings Not Working / Not Saving:** Ensure `glib-compile-schemas "$INSTALL_PATH/schemas/"` ran successfully *after* copying files. Verify the schema ID in `metadata.json` and the `.gschema.xml` file match (`org.gnome.shell.extensions.wallpaper-rotator`).
+* **Wallpapers Not Changing:** Confirm the selected Wallpaper Directory exists, contains supported image files (`.png`, `.jpg`, `.webp`, etc.), and that your user has read permissions for the folder and files. Check the Rotation Interval and ensure Auto-Rotate is enabled. Use "Refresh Wallpaper List" if you added images recently.
+* **Preview Not Showing/Correct:** Check file permissions for images. Ensure images haven't been deleted. If hover preview seems stuck, try closing and reopening the menu.
 
 ## Contributing / Bug Reports
 
@@ -128,4 +147,4 @@ Contributions are welcome! Please submit pull requests via GitHub.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE file](https://www.gnu.org/licenses/gpl-3.0.en.html) for details.
